@@ -69,14 +69,14 @@
 
         .gpu-stats {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
             margin-top: 20px;
         }
 
         .gpu-stat {
             background: rgba(0, 0, 0, 0.3);
-            padding: 20px;
+            padding: 15px;
             border-radius: var(--border-radius);
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -123,8 +123,9 @@
 
         .process-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
 
         .process {
@@ -221,7 +222,7 @@
         .charts-container {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            gap: 15px;
             margin: 20px 0;
         }
 
@@ -230,12 +231,24 @@
             border-radius: var(--border-radius);
             padding: 15px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            height: 300px;
+            height: 250px;
+        }
+
+        @media (max-width: 1200px) {
+            .gpu-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 768px) {
-            .charts-container {
+            .gpu-grid {
                 grid-template-columns: 1fr;
+            }
+            .gpu-stats {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
@@ -275,9 +288,31 @@
 
         .gpu-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
+        }
+
+        /* Style pour les processus par GPU */
+        .gpu-processes-section {
+            margin-bottom: 30px;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+        }
+
+        .gpu-processes-header {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--accent-color);
+        }
+
+        .process-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -527,13 +562,16 @@
                             processesByGpu[process.gpu_id].push(process);
                         });
 
-                        // Afficher les processus groupés par GPU
+                        // Créer une section pour chaque GPU
                         Object.entries(processesByGpu).forEach(([gpuId, processes]) => {
                             const gpuInfo = data.gpus.find(g => g.id === gpuId);
-                            const gpuHeader = document.createElement('div');
-                            gpuHeader.className = 'gpu-processes-header';
-                            gpuHeader.innerHTML = `<h3>Processus sur ${gpuInfo ? gpuInfo.name : `GPU ${gpuId}`}</h3>`;
-                            processContainer.appendChild(gpuHeader);
+                            const section = document.createElement('div');
+                            section.className = 'gpu-processes-section';
+                            
+                            const header = document.createElement('div');
+                            header.className = 'gpu-processes-header';
+                            header.innerHTML = `<h3>Processus sur ${gpuInfo ? gpuInfo.name : `GPU ${gpuId}`}</h3>`;
+                            section.appendChild(header);
 
                             const processGrid = document.createElement('div');
                             processGrid.className = 'process-grid';
@@ -554,7 +592,8 @@
                                 `;
                                 processGrid.appendChild(div);
                             });
-                            processContainer.appendChild(processGrid);
+                            section.appendChild(processGrid);
+                            processContainer.appendChild(section);
                         });
                     }
 
@@ -594,37 +633,31 @@
         }
 
         function killProcess(pid) {
-            if (confirm('Êtes-vous sûr de vouloir terminer ce processus ?')) {
-                fetch(`/kill/${pid}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Processus terminé avec succès');
-                            updateGPUInfo();
-                        } else {
-                            alert('Erreur lors de la terminaison du processus: ' + data.error);
-                        }
-                    });
-            }
+            // Suppression de la confirmation
+            fetch(`/kill/${pid}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Erreur lors de la terminaison du processus: ' + data.error);
+                    }
+                    updateGPUInfo();
+                });
         }
 
         function killAllProcesses(gpuId) {
-            if (confirm('Êtes-vous sûr de vouloir terminer TOUS les processus sur ce GPU ?')) {
-                fetch(`/kill_all_gpu/${gpuId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            if (data.errors.length > 0) {
-                                alert(`Certains processus n'ont pas pu être terminés:\n${data.errors.join('\n')}`);
-                            } else {
-                                alert('Tous les processus ont été terminés avec succès');
-                            }
-                            updateGPUInfo();
-                        } else {
-                            alert('Erreur lors de la terminaison des processus: ' + data.error);
+            // Suppression de la confirmation
+            fetch(`/kill_all_gpu/${gpuId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.errors.length > 0) {
+                            alert(`Certains processus n'ont pas pu être terminés:\n${data.errors.join('\n')}`);
                         }
-                    });
-            }
+                        updateGPUInfo();
+                    } else {
+                        alert('Erreur lors de la terminaison des processus: ' + data.error);
+                    }
+                });
         }
 
         // Initialiser les graphiques au chargement
